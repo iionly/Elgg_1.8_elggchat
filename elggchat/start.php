@@ -24,17 +24,16 @@ elgg_register_event_handler('init', 'system', 'elggchat_init');
 
 function elggchat_init() {
 
-	elgg_extend_view('css/admin', 'css/admin_css');
-	elgg_extend_view('css/elgg','css/css');
+	elgg_extend_view('css/admin', 'elggchat/admin_css');
+	elgg_extend_view('css/elgg','elggchat/css');
+
+	$js_elggchat_snd = elgg_get_site_url() . "mod/elggchat/views/default/js/elggchat/buzz.js";
+	elgg_register_js('elggchat_sound', $js_elggchat_snd);
+	$js_elggchat_scroll = elgg_get_site_url() . "mod/elggchat/views/default/js/elggchat/jquery.scrollTo.js";
+	elgg_register_js('elggchat_scroll', $js_elggchat_scroll);
 
 	if (elgg_is_logged_in()) {
 		if (elgg_get_plugin_user_setting("enableChat", 0, "elggchat") != "no") {
-
-			$js_elggchat_snd = elgg_get_site_url() . "mod/elggchat/views/default/js/elggchat/buzz.min.js";
-			elgg_register_js('elggchat_sound', $js_elggchat_snd);
-			$js_elggchat_scroll = elgg_get_site_url() . "mod/elggchat/views/default/js/elggchat/jquery.scrollTo.min.js";
-			elgg_register_js('elggchat_scroll', $js_elggchat_scroll);
-
 			elgg_extend_view('page/elements/footer', 'elggchat/session_monitor');
 		}
 	}
@@ -45,7 +44,10 @@ function elggchat_init() {
 	elgg_register_plugin_hook_handler('register', 'menu:user_hover', 'elggchat_user_hover_menu');
 
 	// Register cron job
-	elgg_register_plugin_hook_handler('cron', 'hourly', 'elggchat_session_cleanup');
+	$keepsessions = elgg_get_plugin_setting("keepsessions","elggchat");
+	if (elgg_get_plugin_setting("keepsessions","elggchat") != "yes") {
+		elgg_register_plugin_hook_handler('cron', 'hourly', 'elggchat_session_cleanup');
+	}
 
 	// Actions
 	$action_path = elgg_get_plugins_path() . 'elggchat/actions';
@@ -130,7 +132,10 @@ function elggchat_logout_handler($event, $object_type, $object) {
 				// Clean up
 				if($session->countEntitiesFromRelationship(ELGGCHAT_MEMBER) == 0) {
 					// No more members
-					$session->delete();
+					$keepsessions = elgg_get_plugin_setting("keepsessions","elggchat");
+					if (elgg_get_plugin_setting("keepsessions","elggchat") != "yes") {
+						$session->delete();
+					}
 				} elseif ($session->countAnnotations(ELGGCHAT_MESSAGE) == 0 && !check_entity_relationship($session->guid, ELGGCHAT_MEMBER, $session->owner_guid)) {
 					// Owner left without leaving a real message
 					$session->delete();
